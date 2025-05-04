@@ -10,4 +10,5 @@ public class ColorConstants {
 	public static final Color SKY = new Color(0, 0, 200); // Blue for the sky
 	public static final Color OBSTACLE = new Color(128, 0, 0); // Dark red for obstacles
 	public static final Color GOAL = new Color(0, 255, 0); // Green for the goal
+	public static final Color POWER_UP = new Color(255, 255, 0); // Yellow for power-ups
 }
