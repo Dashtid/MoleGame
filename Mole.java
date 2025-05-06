@@ -35,6 +35,14 @@ public class Mole {
 		g.rectangle(0, 5, g.getGridWidth(), g.getGridHeight() - 5, ColorConstants.SOIL); // Soil
 		g.rectangle(0, 0, g.getGridWidth(), 5, ColorConstants.SKY); // Sky
 
+		// Add random green elements to the sky
+		int greenElementCount = 10; // Number of green elements
+		for (int i = 0; i < greenElementCount; i++) {
+			int greenX = (int) (Math.random() * g.getGridWidth());
+			int greenY = (int) (Math.random() * 5); // Restrict to the sky area
+			g.block(greenX, greenY, ColorConstants.GOAL); // Use green color for elements
+		}
+
 		// Add random obstacles
 		int obstacleCount = 50 + level * 10; // Increase obstacles with level
 		for (int i = 0; i < obstacleCount; i++) {
@@ -73,6 +81,15 @@ public class Mole {
 			char key = g.waitForKey(); // Wait for user input
 			g.block(x, y, ColorConstants.TUNNEL); // Leave a tunnel behind
 
+			// Pause feature
+			if (key == 'p') {
+				System.out.println("Game paused. Press any key to resume.");
+				g.showPauseScreen();
+				g.waitForKey(); // Wait for resume
+				g.hidePauseScreen();
+				continue;
+			}
+
 			// Move the mole based on the key press
 			int newX = x, newY = y;
 			int moveDistance = speedBoost ? 2 : 1; // Move twice as far with speed boost
@@ -85,10 +102,18 @@ public class Mole {
 			else if (key == 'd' && x < g.getGridWidth() - moveDistance)
 				newX += moveDistance; // Move right
 
+			// Prevent digging in the sky
+			if (newY < 5) {
+				System.out.println("You can't dig in the sky!");
+				continue;
+			}
+
 			// Check for power-ups
 			if (g.getBlockColor(newX, newY) == ColorConstants.POWER_UP) {
 				System.out.println("You collected a power-up!");
 				speedBoost = true;
+				g.block(newX, newY, ColorConstants.TUNNEL); // Properly fill the hole
+				g.showPowerUpEffect(); // Show visual effect
 			}
 
 			// Check for goal
@@ -97,6 +122,7 @@ public class Mole {
 				System.out.println("You reached the goal in " + moves + " moves and " + (endTime - startTime) / 1000
 						+ " seconds! You win!");
 				score += 100 * level; // Add points for completing the level
+				g.updateScore(score); // Update score display
 				return true;
 			}
 
@@ -114,6 +140,10 @@ public class Mole {
 				System.out.println("Time's up! You failed the level.");
 				return false;
 			}
+
+			// Update timer display
+			long remainingTime = timeLimit - (System.currentTimeMillis() - startTime);
+			g.updateTimer(remainingTime / 1000); // Update timer in seconds
 		}
 	}
 }
