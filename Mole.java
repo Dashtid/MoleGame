@@ -1,4 +1,7 @@
 import java.awt.Color;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class Mole {
 	private static final int INITIAL_GRID_WIDTH = 30;
@@ -11,14 +14,14 @@ public class Mole {
 	private static final int INITIAL_POWER_UP_COUNT = 5;
 	private static final int SKY_HEIGHT = 5; // Constant for sky height
 
-	private Graphics g;
+	private GameGraphics g;
 	private int score = 0;
 
 	public Mole() {
 		try {
-			this.g = new Graphics(INITIAL_GRID_WIDTH, INITIAL_GRID_HEIGHT, BLOCK_SIZE);
+			this.g = new GameGraphics(INITIAL_GRID_WIDTH, INITIAL_GRID_HEIGHT, BLOCK_SIZE);
 		} catch (Exception e) {
-			System.err.println("Failed to initialize Graphics: " + e.getMessage());
+			System.err.println("Failed to initialize GameGraphics: " + e.getMessage());
 			System.exit(1);
 		}
 	}
@@ -28,10 +31,12 @@ public class Mole {
 			Mole m = new Mole();
 			m.startGame();
 			System.out.println("Do you want to play again? (y/n)");
-			char choice = new java.util.Scanner(System.in).next().toLowerCase().charAt(0);
-			if (choice != 'y') {
-				System.out.println("Thanks for playing!");
-				break;
+			try (java.util.Scanner scanner = new java.util.Scanner(System.in)) {
+				char choice = scanner.next().toLowerCase().charAt(0);
+				if (choice != 'y') {
+					System.out.println("Thanks for playing!");
+					break;
+				}
 			}
 		}
 	}
@@ -70,8 +75,11 @@ public class Mole {
 			int powerUpY = SKY_HEIGHT + (int) (Math.random() * (g.getGridHeight() - SKY_HEIGHT));
 			g.block(powerUpX, powerUpY, ColorConstants.POWER_UP);
 		}
-		int goalX = (int) (Math.random() * g.getGridWidth());
-		int goalY = SKY_HEIGHT + (int) (Math.random() * (g.getGridHeight() - SKY_HEIGHT));
+		int goalX, goalY;
+		do {
+			goalX = (int) (Math.random() * g.getGridWidth());
+			goalY = SKY_HEIGHT + (int) (Math.random() * (g.getGridHeight() - SKY_HEIGHT));
+		} while (g.getBlockColor(goalX, goalY) != null); // Ensure no overlap
 		g.block(goalX, goalY, ColorConstants.GOAL);
 	}
 
@@ -81,114 +89,91 @@ public class Mole {
 		int moves = 0;
 		long startTime = System.currentTimeMillis();
 		long timeLimit = Math.max(5000, INITIAL_TIME_LIMIT - (level * TIME_DECREASE_PER_LEVEL));
-		boolean speedBoost = false;
+		final Object speedBoostLock = new Object(); // Lock for thread-safe access
+		final boolean[] speedBoost = { false }; // Use an array to allow modification inside the lambda
+		ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
-		while (true) {
-			g.block(x, y, ColorConstants.MOLE);
-			char key = g.waitForKey();
-			g.block(x, y, ColorConstants.TUNNEL);
+		try {
+			while (true) {
+				g.block(x, y, ColorConstants.MOLE);
+				char key = g.waitForKey();
+				g.block(x, y, ColorConstants.TUNNEL);
 
-			if (key == 'p') {
-				System.out.println("Game paused. Press 'r' to resume.");
-				g.showPauseScreen("Game Paused. Press 'r' to resume.");
-				while (g.waitForKey() != 'r') {
-				}
-				g.hidePauseScreen();
-				continue;
-			}
-
-			int newX = x, newY = y;
-			int moveDistance = speedBoost ? 2 : 1;
-			if (key == 'w' && y > moveDistance - 1)
-				newY -= moveDistance;
-			else if (key == 'a' && x > moveDistance - 1)
-				newX -= moveDistance;
-			else if (key == 's' && y < g.getGridHeight() - moveDistance)
-				newY += moveDistance;
-			else if (key == 'd' && x < g.getGridWidth() - moveDistance)
-				newX += moveDistance;
-
-			if (newY < SKY_HEIGHT) {
-				System.out.println("You can't dig in the sky!");
-				continue;
-			}
-
-			Color blockColor = g.getBlockColor(newX, newY);
-			if (blockColor != null && blockColor == ColorConstants.POWER_UP) {
-				System.out.println("You collected a power-up!");
-				speedBoost = true;
-				g.block(newX, newY, ColorConstants.TUNNEL);
-				g.showPowerUpEffect();
-				new java.util.Timer().schedule(new java.util.TimerTask() {
-					@Override
-					public void run() {
-						speedBoost = false;
+				if (key == 'p') {
+					System.out.println("Game paused. Press 'r' to resume.");
+					g.showPauseScreen("Game Paused. Press 'r' to resume.");
+					while (g.waitForKey() != 'r') {
 					}
-				}, 10000);
-			}
+					g.hidePauseScreen();
+					continue;
+				}
 
-			if (blockColor != null && blockColor == ColorConstants.GOAL) {
-				long endTime = System.currentTimeMillis();
-				System.out.println("You reached the goal in " + moves + " moves and " + (endTime - startTime) / 1000
-						+ " seconds! You win!");
-				score += 100 * level;
-				g.updateScore(score);
-				return true;
-			}
+				int newX = x, newY = y;
+				int moveDistance;
+				synchronized (speedBoostLock) {
+					moveDistance = speedBoost[0] ? 2 : 1;
+				}
 
-			if (blockColor != null && blockColor != ColorConstants.OBSTACLE) {
-				x = newX;
-				y = newY;
-				moves++;
-			} else if (blockColor == ColorConstants.OBSTACLE) {
-				System.out.println("You hit an obstacle!");
-			}
+				if (key == 'w' && y > moveDistance - 1)
+					newY -= moveDistance;
+				else if (key == 'a' && x > moveDistance - 1)
+					newX -= moveDistance;
+				else if (key == 's' && y < g.getGridHeight() - moveDistance)
+					newY += moveDistance;
+				else if (key == 'd' && x < g.getGridWidth() - moveDistance)
+					newX += moveDistance;
 
-			if (System.currentTimeMillis() - startTime > timeLimit) {
-				System.out.println("Time's up! You failed the level.");
-				g.showGameOverScreen(score);
-				return false;
-			}
+				if (newY < SKY_HEIGHT) {
+					System.out.println("You can't dig in the sky!");
+					continue;
+				}
 
-			long remainingTime = timeLimit - (System.currentTimeMillis() - startTime);
-			g.updateTimer(remainingTime / 1000);
+				Color blockColor = g.getBlockColor(newX, newY);
+				if (blockColor != null && blockColor == ColorConstants.POWER_UP) {
+					System.out.println("You collected a power-up!");
+					synchronized (speedBoostLock) {
+						speedBoost[0] = true;
+					}
+					g.block(newX, newY, ColorConstants.TUNNEL);
+					g.showPowerUpEffect();
+					scheduler.schedule(() -> {
+						synchronized (speedBoostLock) {
+							speedBoost[0] = false;
+						}
+					}, 10, TimeUnit.SECONDS);
+				}
+
+				if (blockColor != null && blockColor == ColorConstants.GOAL) {
+					long endTime = System.currentTimeMillis();
+					System.out.println("You reached the goal in " + moves + " moves and " + (endTime - startTime) / 1000
+							+ " seconds! You win!");
+					score += 100 * level;
+					g.updateScore(score);
+					return true;
+				}
+
+				if (blockColor != null && blockColor != ColorConstants.OBSTACLE) {
+					x = newX;
+					y = newY;
+					moves++;
+				} else if (blockColor == ColorConstants.OBSTACLE) {
+					System.out.println("You hit an obstacle!");
+				}
+
+				if (System.currentTimeMillis() - startTime > timeLimit) {
+					System.out.println("Time's up! You failed the level.");
+					g.showGameOverScreen(score);
+					return false;
+				}
+
+				long remainingTime = timeLimit - (System.currentTimeMillis() - startTime);
+				g.updateTimer(remainingTime / 1000);
+			}
+		} finally {
+			// Ensure the scheduler is always shut down
+			if (!scheduler.isShutdown()) {
+				scheduler.shutdown();
+			}
 		}
-	}
-}
-
-public class Graphics {
-	private int gridWidth;
-	private int gridHeight;
-	private int blockSize;
-
-	public Graphics(int width, int height, int blockSize) {
-		this.gridWidth = width;
-		this.gridHeight = height;
-		this.blockSize = blockSize;
-	}
-
-	public void resizeGrid(int width, int height) {
-		this.gridWidth = width;
-		this.gridHeight = height;
-	}
-
-	public int getGridWidth() {
-		return gridWidth;
-	}
-
-	public int getGridHeight() {
-		return gridHeight;
-	}
-
-	public void rectangle(int x, int y, int width, int height, Color color) {
-		for (int i = x; i < x + width; i++) {
-			for (int j = y; j < y + height; j++) {
-				block(i, j, color);
-			}
-		}
-	}
-
-	public void block(int x, int y, Color color) {
-		// Add implementation to draw a block at position x,y with the specified color
 	}
 }
