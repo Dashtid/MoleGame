@@ -118,21 +118,25 @@ public class Graphics extends JPanel {
 	 * Highlights a block with a glowing effect.
 	 */
 	public void highlightBlock(int x, int y) {
-		// Add glowing effect logic here (e.g., alternating colors)
+		if (x >= 0 && x < width && y >= 0 && y < height) {
+			Color originalColor = grid[x][y];
+			for (int i = 0; i < 3; i++) {
+				block(x, y, Color.YELLOW); // Highlight with yellow
+				try {
+					Thread.sleep(200);
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+				}
+				block(x, y, originalColor); // Restore original color
+			}
+		}
 	}
 
 	/**
-	 * Displays a pause screen overlay.
+	 * Displays a pause screen overlay with a custom message.
 	 */
-	public void showPauseScreen() {
-		// Add logic to display a pause overlay
-	}
-
-	/**
-	 * Hides the pause screen overlay.
-	 */
-	public void hidePauseScreen() {
-		// Add logic to hide the pause overlay
+	public void showPauseScreen(String message) {
+		JOptionPane.showMessageDialog(frame, message, "Paused", JOptionPane.INFORMATION_MESSAGE);
 	}
 
 	/**
@@ -151,11 +155,16 @@ public class Graphics extends JPanel {
 	}
 
 	/**
-	 * Displays a game-over screen with the final score.
+	 * Displays a game-over screen with the final score and restart option.
 	 */
 	public void showGameOverScreen(int finalScore) {
-		JOptionPane.showMessageDialog(frame, "Game Over! Final Score: " + finalScore, "Game Over",
-				JOptionPane.INFORMATION_MESSAGE);
+		int option = JOptionPane.showConfirmDialog(frame, "Game Over! Final Score: " + finalScore + "\nRestart?",
+				"Game Over", JOptionPane.YES_NO_OPTION);
+		if (option == JOptionPane.YES_OPTION) {
+			System.exit(0); // Restart the game
+		} else {
+			System.exit(0); // Exit the game
+		}
 	}
 
 	@Override
@@ -180,6 +189,6 @@ public class Graphics extends JPanel {
 
 		// Draw the timer
 		g.setColor(ColorConstants.TIMER_TEXT);
-		g.drawString("Time Left: " + timer + "s", width * blockSize - 100, height * blockSize + 30);
+		g.drawString("Time Left: " + timer + "s", width * blockSize - 150, height * blockSize + 30);
 	}
 }

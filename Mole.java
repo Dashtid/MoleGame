@@ -1,149 +1,194 @@
+import java.awt.Color;
+
 public class Mole {
-	private Graphics g = new Graphics(30, 50, 20); // Grid dimensions and block size
+	private static final int INITIAL_GRID_WIDTH = 30;
+	private static final int INITIAL_GRID_HEIGHT = 50;
+	private static final int BLOCK_SIZE = 20;
+	private static final int INITIAL_TIME_LIMIT = 60000;
+	private static final int TIME_DECREASE_PER_LEVEL = 5000;
+	private static final int INITIAL_OBSTACLE_COUNT = 50;
+	private static final int OBSTACLE_INCREASE_PER_LEVEL = 10;
+	private static final int INITIAL_POWER_UP_COUNT = 5;
+	private static final int SKY_HEIGHT = 5; // Constant for sky height
+
+	private Graphics g;
 	private int score = 0;
 
-	public static void main(String[] args) {
-		Mole m = new Mole();
-		m.startGame();
+	public Mole() {
+		try {
+			this.g = new Graphics(INITIAL_GRID_WIDTH, INITIAL_GRID_HEIGHT, BLOCK_SIZE);
+		} catch (Exception e) {
+			System.err.println("Failed to initialize Graphics: " + e.getMessage());
+			System.exit(1);
+		}
 	}
 
-	/**
-	 * Starts the game and progresses through levels.
-	 */
+	public static void main(String[] args) {
+		while (true) {
+			Mole m = new Mole();
+			m.startGame();
+			System.out.println("Do you want to play again? (y/n)");
+			char choice = new java.util.Scanner(System.in).next().toLowerCase().charAt(0);
+			if (choice != 'y') {
+				System.out.println("Thanks for playing!");
+				break;
+			}
+		}
+	}
+
 	public void startGame() {
 		int level = 1;
 		while (true) {
 			System.out.println("Starting Level " + level);
-			g = new Graphics(30 + level * 5, 50 + level * 5, 20); // Increase grid size with each level
+			int newGridWidth = INITIAL_GRID_WIDTH + level * 5;
+			int newGridHeight = INITIAL_GRID_HEIGHT + level * 5;
+			g.resizeGrid(newGridWidth, newGridHeight);
 			drawWorld(level);
 			boolean success = dig(level);
 			if (success) {
 				System.out.println("Level " + level + " completed!");
 				level++;
 			} else {
-				System.out.println("Game Over! You failed at Level " + level);
 				System.out.println("Game Over! Your final score is: " + score);
 				break;
 			}
 		}
 	}
 
-	/**
-	 * Draws the initial world with soil and sky.
-	 */
 	public void drawWorld(int level) {
-		g.rectangle(0, 5, g.getGridWidth(), g.getGridHeight() - 5, ColorConstants.SOIL); // Soil
-		g.rectangle(0, 0, g.getGridWidth(), 5, ColorConstants.SKY); // Sky
-
-		// Add random green elements to the sky
-		int greenElementCount = 10; // Number of green elements
-		for (int i = 0; i < greenElementCount; i++) {
-			int greenX = (int) (Math.random() * g.getGridWidth());
-			int greenY = (int) (Math.random() * 5); // Restrict to the sky area
-			g.block(greenX, greenY, ColorConstants.GOAL); // Use green color for elements
-		}
-
-		// Add random obstacles
-		int obstacleCount = 50 + level * 10; // Increase obstacles with level
+		g.rectangle(0, SKY_HEIGHT, g.getGridWidth(), g.getGridHeight() - SKY_HEIGHT, ColorConstants.SOIL);
+		g.rectangle(0, 0, g.getGridWidth(), SKY_HEIGHT, ColorConstants.SKY);
+		int obstacleCount = INITIAL_OBSTACLE_COUNT + level * OBSTACLE_INCREASE_PER_LEVEL;
 		for (int i = 0; i < obstacleCount; i++) {
 			int obstacleX = (int) (Math.random() * g.getGridWidth());
-			int obstacleY = 5 + (int) (Math.random() * (g.getGridHeight() - 5));
+			int obstacleY = SKY_HEIGHT + (int) (Math.random() * (g.getGridHeight() - SKY_HEIGHT));
 			g.block(obstacleX, obstacleY, ColorConstants.OBSTACLE);
 		}
-
-		// Add power-ups
-		int powerUpCount = 5; // Fixed number of power-ups
+		int powerUpCount = INITIAL_POWER_UP_COUNT + level;
 		for (int i = 0; i < powerUpCount; i++) {
 			int powerUpX = (int) (Math.random() * g.getGridWidth());
-			int powerUpY = 5 + (int) (Math.random() * (g.getGridHeight() - 5));
+			int powerUpY = SKY_HEIGHT + (int) (Math.random() * (g.getGridHeight() - SKY_HEIGHT));
 			g.block(powerUpX, powerUpY, ColorConstants.POWER_UP);
 		}
-
-		// Add a goal
 		int goalX = (int) (Math.random() * g.getGridWidth());
-		int goalY = 5 + (int) (Math.random() * (g.getGridHeight() - 5));
+		int goalY = SKY_HEIGHT + (int) (Math.random() * (g.getGridHeight() - SKY_HEIGHT));
 		g.block(goalX, goalY, ColorConstants.GOAL);
 	}
 
-	/**
-	 * Allows the mole to dig tunnels based on user input.
-	 */
 	public boolean dig(int level) {
-		int x = g.getGridWidth() / 2; // Start in the middle
+		int x = g.getGridWidth() / 2;
 		int y = g.getGridHeight() / 2;
-		int moves = 0; // Track the number of moves
-		long startTime = System.currentTimeMillis(); // Start the timer
-		long timeLimit = 60000 - (level * 5000); // Decrease time limit with level
-		boolean speedBoost = false; // Track speed boost
+		int moves = 0;
+		long startTime = System.currentTimeMillis();
+		long timeLimit = Math.max(5000, INITIAL_TIME_LIMIT - (level * TIME_DECREASE_PER_LEVEL));
+		boolean speedBoost = false;
 
 		while (true) {
-			g.block(x, y, ColorConstants.MOLE); // Draw the mole
-			char key = g.waitForKey(); // Wait for user input
-			g.block(x, y, ColorConstants.TUNNEL); // Leave a tunnel behind
+			g.block(x, y, ColorConstants.MOLE);
+			char key = g.waitForKey();
+			g.block(x, y, ColorConstants.TUNNEL);
 
-			// Pause feature
 			if (key == 'p') {
-				System.out.println("Game paused. Press any key to resume.");
-				g.showPauseScreen();
-				g.waitForKey(); // Wait for resume
+				System.out.println("Game paused. Press 'r' to resume.");
+				g.showPauseScreen("Game Paused. Press 'r' to resume.");
+				while (g.waitForKey() != 'r') {
+				}
 				g.hidePauseScreen();
 				continue;
 			}
 
-			// Move the mole based on the key press
 			int newX = x, newY = y;
-			int moveDistance = speedBoost ? 2 : 1; // Move twice as far with speed boost
+			int moveDistance = speedBoost ? 2 : 1;
 			if (key == 'w' && y > moveDistance - 1)
-				newY -= moveDistance; // Move up
+				newY -= moveDistance;
 			else if (key == 'a' && x > moveDistance - 1)
-				newX -= moveDistance; // Move left
+				newX -= moveDistance;
 			else if (key == 's' && y < g.getGridHeight() - moveDistance)
-				newY += moveDistance; // Move down
+				newY += moveDistance;
 			else if (key == 'd' && x < g.getGridWidth() - moveDistance)
-				newX += moveDistance; // Move right
+				newX += moveDistance;
 
-			// Prevent digging in the sky
-			if (newY < 5) {
+			if (newY < SKY_HEIGHT) {
 				System.out.println("You can't dig in the sky!");
 				continue;
 			}
 
-			// Check for power-ups
-			if (g.getBlockColor(newX, newY) == ColorConstants.POWER_UP) {
+			Color blockColor = g.getBlockColor(newX, newY);
+			if (blockColor != null && blockColor == ColorConstants.POWER_UP) {
 				System.out.println("You collected a power-up!");
 				speedBoost = true;
-				g.block(newX, newY, ColorConstants.TUNNEL); // Properly fill the hole
-				g.showPowerUpEffect(); // Show visual effect
+				g.block(newX, newY, ColorConstants.TUNNEL);
+				g.showPowerUpEffect();
+				new java.util.Timer().schedule(new java.util.TimerTask() {
+					@Override
+					public void run() {
+						speedBoost = false;
+					}
+				}, 10000);
 			}
 
-			// Check for goal
-			if (g.getBlockColor(newX, newY) == ColorConstants.GOAL) {
-				long endTime = System.currentTimeMillis(); // End the timer
+			if (blockColor != null && blockColor == ColorConstants.GOAL) {
+				long endTime = System.currentTimeMillis();
 				System.out.println("You reached the goal in " + moves + " moves and " + (endTime - startTime) / 1000
 						+ " seconds! You win!");
-				score += 100 * level; // Add points for completing the level
-				g.updateScore(score); // Update score display
+				score += 100 * level;
+				g.updateScore(score);
 				return true;
 			}
 
-			// Check for obstacles
-			if (g.getBlockColor(newX, newY) != ColorConstants.OBSTACLE) {
+			if (blockColor != null && blockColor != ColorConstants.OBSTACLE) {
 				x = newX;
 				y = newY;
-				moves++; // Increment moves
-			} else {
+				moves++;
+			} else if (blockColor == ColorConstants.OBSTACLE) {
 				System.out.println("You hit an obstacle!");
 			}
 
-			// Check time limit
 			if (System.currentTimeMillis() - startTime > timeLimit) {
 				System.out.println("Time's up! You failed the level.");
+				g.showGameOverScreen(score);
 				return false;
 			}
 
-			// Update timer display
 			long remainingTime = timeLimit - (System.currentTimeMillis() - startTime);
-			g.updateTimer(remainingTime / 1000); // Update timer in seconds
+			g.updateTimer(remainingTime / 1000);
 		}
+	}
+}
+
+public class Graphics {
+	private int gridWidth;
+	private int gridHeight;
+	private int blockSize;
+
+	public Graphics(int width, int height, int blockSize) {
+		this.gridWidth = width;
+		this.gridHeight = height;
+		this.blockSize = blockSize;
+	}
+
+	public void resizeGrid(int width, int height) {
+		this.gridWidth = width;
+		this.gridHeight = height;
+	}
+
+	public int getGridWidth() {
+		return gridWidth;
+	}
+
+	public int getGridHeight() {
+		return gridHeight;
+	}
+
+	public void rectangle(int x, int y, int width, int height, Color color) {
+		for (int i = x; i < x + width; i++) {
+			for (int j = y; j < y + height; j++) {
+				block(i, j, color);
+			}
+		}
+	}
+
+	public void block(int x, int y, Color color) {
+		// Add implementation to draw a block at position x,y with the specified color
 	}
 }

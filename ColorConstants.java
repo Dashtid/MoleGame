@@ -15,4 +15,6 @@ public class ColorConstants {
 	public static final Color SCORE_TEXT = new Color(255, 255, 255); // White for score text
 	public static final Color TIMER_TEXT = new Color(255, 255, 0); // Yellow for timer text
 	public static final Color PAUSE_OVERLAY = new Color(0, 0, 0, 150); // Semi-transparent black for pause overlay
+	public static final Color PAUSE_TEXT = new Color(255, 255, 255); // White for pause text
+	public static final Color GLOW_EFFECT = new Color(255, 255, 0); // Yellow for glowing effect
 }
