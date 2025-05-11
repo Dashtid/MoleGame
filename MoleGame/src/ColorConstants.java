@@ -1,3 +1,5 @@
+package MoleGame.src;
+
 import java.awt.Color;
 
 /**

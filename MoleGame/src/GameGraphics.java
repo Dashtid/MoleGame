@@ -1,3 +1,5 @@
+package MoleGame.src;
+
 import javax.swing.*;
 import java.awt.*;
 
@@ -13,6 +15,8 @@ public class GameGraphics extends JPanel {
 	private char lastKeyPressed;
 	private int score;
 	private long timer;
+	private boolean isPaused = false;
+	private JLabel timerLabel;
 
 	public GameGraphics(int w, int h, int bs) {
 		this.width = w;
@@ -24,8 +28,18 @@ public class GameGraphics extends JPanel {
 		// Initialize the JFrame
 		frame = new JFrame("Mole Game - Advanced Edition");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frame.setSize(width * blockSize, height * blockSize + 50); // Add space for score panel
-		frame.add(this);
+		frame.setLayout(new BorderLayout());
+
+		// Add the game grid
+		this.setPreferredSize(new Dimension(width * blockSize, height * blockSize));
+		frame.add(this, BorderLayout.CENTER);
+
+		// Add a timer label
+		timerLabel = new JLabel("Time: 0s");
+		timerLabel.setHorizontalAlignment(SwingConstants.CENTER);
+		frame.add(timerLabel, BorderLayout.NORTH);
+
+		frame.pack();
 		frame.setVisible(true);
 
 		// Add key listener for user input
@@ -47,7 +61,8 @@ public class GameGraphics extends JPanel {
 		this.width = newWidth;
 		this.height = newHeight;
 		this.grid = new Color[width][height]; // Create a new grid with the updated size
-		frame.setSize(width * blockSize, height * blockSize + 50); // Update the frame size
+		this.setPreferredSize(new Dimension(width * blockSize, height * blockSize));
+		frame.pack(); // Adjust the frame size
 		repaint(); // Redraw the updated grid
 	}
 
@@ -55,7 +70,8 @@ public class GameGraphics extends JPanel {
 	 * Hides the pause screen overlay.
 	 */
 	public void hidePauseScreen() {
-		repaint(); // Redraw the game screen to remove any pause overlay
+		isPaused = false;
+		repaint();
 	}
 
 	/**
@@ -154,6 +170,8 @@ public class GameGraphics extends JPanel {
 	 * Displays a pause screen overlay with a custom message.
 	 */
 	public void showPauseScreen(String message) {
+		isPaused = true;
+		repaint();
 		JOptionPane.showMessageDialog(frame, message, "Paused", JOptionPane.INFORMATION_MESSAGE);
 	}
 
@@ -161,7 +179,7 @@ public class GameGraphics extends JPanel {
 	 * Displays a power-up collection effect.
 	 */
 	public void showPowerUpEffect() {
-		// Add logic for a visual effect (e.g., flashing colors)
+		JOptionPane.showMessageDialog(frame, "Power-Up Activated!", "Power-Up", JOptionPane.INFORMATION_MESSAGE);
 	}
 
 	/**
@@ -169,6 +187,7 @@ public class GameGraphics extends JPanel {
 	 */
 	public void updateTimer(long secondsRemaining) {
 		this.timer = secondsRemaining;
+		timerLabel.setText("Time: " + secondsRemaining + "s");
 		repaint();
 	}
 
@@ -179,14 +198,17 @@ public class GameGraphics extends JPanel {
 		int option = JOptionPane.showConfirmDialog(frame, "Game Over! Final Score: " + finalScore + "\nRestart?",
 				"Game Over", JOptionPane.YES_NO_OPTION);
 		if (option == JOptionPane.YES_OPTION) {
-			System.exit(0); // Restart the game
+			// Restart the game
+			synchronized (this) {
+				notify(); // Notify the main thread to restart
+			}
 		} else {
 			System.exit(0); // Exit the game
 		}
 	}
 
 	@Override
-	protected void paintComponent(java.awt.Graphics g) {
+	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
 
 		// Draw the game grid
@@ -208,5 +230,34 @@ public class GameGraphics extends JPanel {
 		// Draw the timer
 		g.setColor(ColorConstants.TIMER_TEXT);
 		g.drawString("Time Left: " + timer + "s", width * blockSize - 150, height * blockSize + 30);
+
+		// Draw pause overlay if paused
+		if (isPaused) {
+			g.setColor(ColorConstants.PAUSE_OVERLAY);
+			g.fillRect(0, 0, width * blockSize, height * blockSize);
+			g.setColor(ColorConstants.PAUSE_TEXT);
+			g.drawString("Paused", width * blockSize / 2 - 30, height * blockSize / 2);
+		}
+	}
+
+	/**
+	 * Displays a message to the user in a dialog box.
+	 */
+	public void showMessage(String message) {
+		JOptionPane.showMessageDialog(frame, message);
+	}
+
+	/**
+	 * Prompts the user for input using a dialog box.
+	 */
+	public String showInputDialog(String message) {
+		return JOptionPane.showInputDialog(frame, message);
+	}
+
+	/**
+	 * Displays an error message to the user in a dialog box.
+	 */
+	public void showError(String message) {
+		JOptionPane.showMessageDialog(frame, message, "Error", JOptionPane.ERROR_MESSAGE);
 	}
 }
