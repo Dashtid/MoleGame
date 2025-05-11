@@ -1,7 +1,9 @@
-package MoleGame.src;
+package game;
 
 import javax.swing.*;
 import java.awt.*;
+import static game.ColorConstants.TIMER_TEXT;
+import utils.InputHandler;
 
 /**
  * Handles rendering for the mole game using Swing and AWT.
@@ -17,16 +19,17 @@ public class GameGraphics extends JPanel {
 	private long timer;
 	private boolean isPaused = false;
 	private JLabel timerLabel;
+	private InputHandler inputHandler;
 
 	public GameGraphics(int w, int h, int bs) {
 		this.width = w;
-		this.blockSize = bs;
 		this.height = h;
-		this.grid = new Color[width][height];
+		this.blockSize = bs;
+		this.grid = new Color[width][height]; // Initialize the grid
 		this.score = 0;
 
 		// Initialize the JFrame
-		frame = new JFrame("Mole Game - Advanced Edition");
+		frame = new JFrame("Mole Game");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setLayout(new BorderLayout());
 
@@ -43,15 +46,8 @@ public class GameGraphics extends JPanel {
 		frame.setVisible(true);
 
 		// Add key listener for user input
-		frame.addKeyListener(new java.awt.event.KeyAdapter() {
-			@Override
-			public void keyPressed(java.awt.event.KeyEvent e) {
-				lastKeyPressed = e.getKeyChar();
-				synchronized (GameGraphics.this) {
-					GameGraphics.this.notify(); // Notify waiting thread
-				}
-			}
-		});
+		inputHandler = new InputHandler();
+		frame.addKeyListener(inputHandler);
 	}
 
 	/**
@@ -100,17 +96,10 @@ public class GameGraphics extends JPanel {
 	}
 
 	/**
-	 * Waits for a key press and returns the pressed key.
+	 * Waits for a key press and returns the pressed key asynchronously.
 	 */
 	public char waitForKey() {
-		try {
-			synchronized (this) {
-				wait(); // Wait for key press
-			}
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-		}
-		return lastKeyPressed;
+		return inputHandler.waitForKeyPress();
 	}
 
 	/**
@@ -154,15 +143,18 @@ public class GameGraphics extends JPanel {
 	public void highlightBlock(int x, int y) {
 		if (x >= 0 && x < width && y >= 0 && y < height) {
 			Color originalColor = grid[x][y];
-			for (int i = 0; i < 3; i++) {
-				block(x, y, Color.YELLOW); // Highlight with yellow
+			new Thread(() -> {
 				try {
-					Thread.sleep(200);
+					for (int i = 0; i < 3; i++) {
+						block(x, y, ColorConstants.GLOW_EFFECT); // Highlight with glow effect
+						Thread.sleep(200);
+						block(x, y, originalColor); // Restore original color
+						Thread.sleep(200);
+					}
 				} catch (InterruptedException e) {
 					Thread.currentThread().interrupt();
 				}
-				block(x, y, originalColor); // Restore original color
-			}
+			}).start();
 		}
 	}
 
@@ -198,12 +190,11 @@ public class GameGraphics extends JPanel {
 		int option = JOptionPane.showConfirmDialog(frame, "Game Over! Final Score: " + finalScore + "\nRestart?",
 				"Game Over", JOptionPane.YES_NO_OPTION);
 		if (option == JOptionPane.YES_OPTION) {
-			// Restart the game
 			synchronized (this) {
 				notify(); // Notify the main thread to restart
 			}
 		} else {
-			System.exit(0); // Exit the game
+			frame.dispose(); // Close the game window gracefully
 		}
 	}
 
@@ -221,23 +212,9 @@ public class GameGraphics extends JPanel {
 			}
 		}
 
-		// Draw the score panel
-		g.setColor(ColorConstants.SCORE_PANEL);
-		g.fillRect(0, height * blockSize, width * blockSize, 50);
-		g.setColor(ColorConstants.SCORE_TEXT);
-		g.drawString("Score: " + score, 10, height * blockSize + 30);
-
-		// Draw the timer
+		// Draw the timer below the grid
 		g.setColor(ColorConstants.TIMER_TEXT);
-		g.drawString("Time Left: " + timer + "s", width * blockSize - 150, height * blockSize + 30);
-
-		// Draw pause overlay if paused
-		if (isPaused) {
-			g.setColor(ColorConstants.PAUSE_OVERLAY);
-			g.fillRect(0, 0, width * blockSize, height * blockSize);
-			g.setColor(ColorConstants.PAUSE_TEXT);
-			g.drawString("Paused", width * blockSize / 2 - 30, height * blockSize / 2);
-		}
+		g.drawString("Time: " + timer + "s", 10, height * blockSize + 40);
 	}
 
 	/**
@@ -259,5 +236,14 @@ public class GameGraphics extends JPanel {
 	 */
 	public void showError(String message) {
 		JOptionPane.showMessageDialog(frame, message, "Error", JOptionPane.ERROR_MESSAGE);
+	}
+
+	// Key listener to capture key presses
+	@Override
+	public void keyPressed(KeyEvent e) {
+		synchronized (this) {
+			lastKeyPressed = e.getKeyChar();
+			notifyAll(); // Notify waiting threads
+		}
 	}
 }
