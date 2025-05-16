@@ -2,7 +2,6 @@ package game;
 
 import javax.swing.*;
 import java.awt.*;
-import static game.ColorConstants.TIMER_TEXT;
 import utils.InputHandler;
 
 /**
@@ -14,7 +13,6 @@ public class GameGraphics extends JPanel {
 	private int blockSize;
 	private int height;
 	private Color[][] grid;
-	private char lastKeyPressed;
 	private int score;
 	private long timer;
 	private boolean isPaused = false;
@@ -198,7 +196,6 @@ public class GameGraphics extends JPanel {
 		}
 	}
 
-	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
 
@@ -215,6 +212,16 @@ public class GameGraphics extends JPanel {
 		// Draw the timer below the grid
 		g.setColor(ColorConstants.TIMER_TEXT);
 		g.drawString("Time: " + timer + "s", 10, height * blockSize + 40);
+
+		g.setColor(Color.WHITE);
+		g.drawString("Score: " + score, 10, height * blockSize + 60);
+
+		if (isPaused) {
+			g.setColor(new Color(0, 0, 0, 128));
+			g.fillRect(0, 0, getWidth(), getHeight());
+			g.setColor(Color.WHITE);
+			g.drawString("Paused", getWidth() / 2 - 30, getHeight() / 2);
+		}
 	}
 
 	/**
@@ -238,12 +245,4 @@ public class GameGraphics extends JPanel {
 		JOptionPane.showMessageDialog(frame, message, "Error", JOptionPane.ERROR_MESSAGE);
 	}
 
-	// Key listener to capture key presses
-	@Override
-	public void keyPressed(KeyEvent e) {
-		synchronized (this) {
-			lastKeyPressed = e.getKeyChar();
-			notifyAll(); // Notify waiting threads
-		}
-	}
 }

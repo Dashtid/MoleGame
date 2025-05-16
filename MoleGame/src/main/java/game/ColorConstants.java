@@ -16,4 +16,5 @@ public class ColorConstants {
 
 	// Add the missing TIMER_TEXT constant
 	public static final Color TIMER_TEXT = new Color(255, 255, 0); // Yellow for timer text
+	public static final Color GLOW_EFFECT = new Color(255, 255, 102); // Light yellow for glow effect
 }

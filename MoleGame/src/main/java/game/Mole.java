@@ -1,4 +1,4 @@
-package src;
+package game;
 
 import java.awt.Color;
 import java.util.Map;
@@ -6,6 +6,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+
+import utils.InputHandler;
 
 public class Mole {
 	private static final int INITIAL_GRID_WIDTH = 30;
@@ -23,6 +25,7 @@ public class Mole {
 	private GameGraphics g;
 	private int score = 0;
 	private static final Logger logger = Logger.getLogger(Mole.class.getName());
+	private InputHandler inputHandler = new InputHandler();
 
 	public Mole() {
 		try {
