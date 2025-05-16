@@ -191,6 +191,16 @@ public class Mole {
 						continue;
 					}
 
+					// Fill all cells between old and new position with TUNNEL
+					int steps = Math.max(Math.abs(newX - x), Math.abs(newY - y));
+					for (int i = 1; i <= steps; i++) {
+						int intermediateX = x + (newX - x) * i / steps;
+						int intermediateY = y + (newY - y) * i / steps;
+						// Only fill with tunnel if not the destination
+						if (i < steps) {
+							g.block(intermediateX, intermediateY, ColorConstants.TUNNEL);
+						}
+					}
 					// Remove the mole from the current position (turn to tunnel)
 					g.block(x, y, ColorConstants.TUNNEL);
 
@@ -200,7 +210,6 @@ public class Mole {
 					moves++;
 
 					// Draw the mole at the new position
-					System.out.println("Moving mole to (" + x + ", " + y + ")");
 					g.block(x, y, ColorConstants.MOLE);
 
 					// Handle power-up
