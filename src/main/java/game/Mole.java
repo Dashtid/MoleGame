@@ -18,7 +18,7 @@ public class Mole {
 	private static final int INITIAL_OBSTACLE_COUNT = 50;
 	private static final int OBSTACLE_INCREASE_PER_LEVEL = 10;
 	private static final int INITIAL_POWER_UP_COUNT = 5;
-	private static final int SKY_HEIGHT = 5;
+	public static final int SKY_HEIGHT = 5;
 	private static final int POWER_UP_DURATION = 10;
 	private static final int MIN_TIME_LIMIT = 5000;
 
@@ -185,6 +185,22 @@ public class Mole {
 						continue;
 					}
 
+					// Check for obstacles along the path
+					boolean pathBlocked = false;
+					int steps = Math.max(Math.abs(newX - x), Math.abs(newY - y));
+					for (int i = 1; i <= steps; i++) {
+						int intermediateX = x + (newX - x) * i / steps;
+						int intermediateY = y + (newY - y) * i / steps;
+						if (g.getBlockColor(intermediateX, intermediateY) == ColorConstants.OBSTACLE) {
+							pathBlocked = true;
+							break;
+						}
+					}
+					if (pathBlocked) {
+						g.showMessage("You can't dig through obstacles, even with a power-up!");
+						continue;
+					}
+
 					blockColor = g.getBlockColor(newX, newY);
 					if (blockColor == ColorConstants.OBSTACLE) {
 						g.showMessage("You hit an obstacle!");
@@ -192,7 +208,6 @@ public class Mole {
 					}
 
 					// Fill all cells between old and new position with TUNNEL
-					int steps = Math.max(Math.abs(newX - x), Math.abs(newY - y));
 					for (int i = 1; i <= steps; i++) {
 						int intermediateX = x + (newX - x) * i / steps;
 						int intermediateY = y + (newY - y) * i / steps;
@@ -215,11 +230,9 @@ public class Mole {
 					// Handle power-up
 					if (blockColor == ColorConstants.POWER_UP) {
 						logger.info("Power-up collected at position (" + newX + ", " + newY + ")");
-						g.showMessage("Speed boost activated!");
 						synchronized (speedBoostLock) {
 							speedBoost[0] = true;
 						}
-						g.showPowerUpEffect();
 						scheduler.schedule(() -> {
 							synchronized (speedBoostLock) {
 								speedBoost[0] = false;

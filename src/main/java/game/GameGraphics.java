@@ -3,6 +3,9 @@ package game;
 import javax.swing.*;
 import java.awt.*;
 import utils.InputHandler;
+import java.awt.Dimension;
+import java.awt.GraphicsEnvironment;
+import java.awt.Rectangle;
 
 /**
  * Handles rendering for the mole game using Swing and AWT.
@@ -45,7 +48,19 @@ public class GameGraphics extends JPanel {
 		this.frame = new JFrame("Mole Game");
 		this.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		this.frame.add(this);
-		this.frame.pack();
+
+		// Get the usable screen bounds (excluding taskbar)
+		Rectangle usableBounds = GraphicsEnvironment.getLocalGraphicsEnvironment()
+				.getMaximumWindowBounds();
+
+		// Set the frame size to fit within usable bounds
+		int frameWidth = Math.min(width * blockSize, usableBounds.width);
+		int frameHeight = Math.min(height * blockSize + 40, usableBounds.height);
+		this.frame.setSize(frameWidth, frameHeight);
+
+		// Maximize the frame (will respect usable bounds)
+		this.frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+
 		this.frame.setLocationRelativeTo(null);
 		this.frame.setVisible(true);
 
@@ -93,18 +108,8 @@ public class GameGraphics extends JPanel {
 
 	public void block(int x, int y, Color color) {
 		if (x >= 0 && x < width && y >= 0 && y < height) {
-			System.out.println("Drawing block at (" + x + "," + y + ") with color " + color);
 			grid[x][y] = color;
-
-			// Calculate pixel coordinates
-			int pixelX = x * blockSize;
-			int pixelY = y * blockSize;
-
-			// Request a repaint of just this block's area
-			repaint(pixelX, pixelY, blockSize, blockSize);
-
-			// Force immediate repaint
-			paintImmediately(pixelX, pixelY, blockSize, blockSize);
+			// Do NOT call repaint() or paintImmediately() here for world generation
 		} else {
 			System.out.println("Attempted to draw block outside bounds at (" + x + "," + y + ")");
 		}
@@ -182,26 +187,31 @@ public class GameGraphics extends JPanel {
 		g.setColor(Color.WHITE);
 		g.fillRect(0, 0, getWidth(), getHeight());
 
-		// Draw grid
+		// Draw grid and blocks
 		for (int x = 0; x < width; x++) {
 			for (int y = 0; y < height; y++) {
-				// Draw cell background
-				g.setColor(Color.LIGHT_GRAY);
-				g.drawRect(x * blockSize, y * blockSize, blockSize, blockSize);
-
-				// Draw block if it exists
-				if (grid[x][y] != null) {
+				if (grid[x][y] == ColorConstants.MOLE) {
+					g.setColor(ColorConstants.MOLE);
+					g.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
+				} else if (grid[x][y] != null) {
 					g.setColor(grid[x][y]);
 					g.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
-
-					// Draw border around block
-					g.setColor(Color.BLACK);
+				}
+				// Draw gridlines only if not in the sky
+				if (y >= Mole.SKY_HEIGHT) {
+					g.setColor(Color.LIGHT_GRAY);
 					g.drawRect(x * blockSize, y * blockSize, blockSize, blockSize);
 				}
 			}
 		}
 
-		// Draw score and timer with better visibility
+		// Draw clouds in the sky
+		drawClouds(g);
+
+		// Draw trees and rocks above ground
+		drawTreesAndRocks(g);
+
+		// Draw score and timer
 		g.setColor(Color.BLACK);
 		g.setFont(new Font("Arial", Font.BOLD, 14));
 		g.drawString("Score: " + score, 10, height * blockSize + 20);
@@ -213,6 +223,55 @@ public class GameGraphics extends JPanel {
 			g.setColor(Color.WHITE);
 			g.setFont(g.getFont().deriveFont(Font.BOLD, 36f));
 			g.drawString("PAUSED", getWidth() / 2 - 80, getHeight() / 2);
+		}
+	}
+
+	// Add this method to GameGraphics.java
+	private void drawClouds(Graphics g) {
+		g.setColor(new Color(255, 255, 255, 230));
+		// Cloud bank 1
+		g.fillOval(30, 10, 60, 30);
+		g.fillOval(60, 5, 50, 25);
+		g.fillOval(90, 15, 70, 35);
+		g.fillOval(120, 8, 40, 20);
+		g.fillOval(100, 25, 60, 25);
+		// Cloud bank 2
+		g.fillOval(220, 18, 80, 35);
+		g.fillOval(250, 5, 60, 25);
+		g.fillOval(270, 25, 70, 30);
+		g.fillOval(300, 10, 50, 20);
+		g.fillOval(320, 22, 60, 25);
+		// Cloud bank 3
+		g.fillOval(420, 12, 90, 40);
+		g.fillOval(460, 5, 60, 25);
+		g.fillOval(480, 25, 70, 30);
+		g.fillOval(510, 15, 50, 20);
+		g.fillOval(530, 28, 60, 25);
+		// Small scattered clouds
+		g.fillOval(180, 40, 40, 18);
+		g.fillOval(380, 35, 35, 15);
+		g.fillOval(600, 20, 50, 20);
+		g.fillOval(700, 30, 60, 25);
+	}
+
+	private void drawTreesAndRocks(Graphics g) {
+		int groundY = Mole.SKY_HEIGHT * blockSize;
+		// Draw trees
+		for (int i = 2; i < width; i += 7) {
+			int x = i * blockSize + blockSize / 4;
+			// Tree trunk
+			g.setColor(new Color(101, 67, 33));
+			g.fillRect(x + blockSize / 4, groundY - 18, blockSize / 4, 18);
+			// Tree foliage
+			g.setColor(new Color(34, 139, 34));
+			g.fillOval(x, groundY - 32, blockSize, 20);
+		}
+		// Draw rocks (bottom of oval at groundY)
+		g.setColor(new Color(120, 120, 120));
+		for (int i = 5; i < width; i += 11) {
+			int x = i * blockSize + blockSize / 4;
+			int rockHeight = blockSize / 3;
+			g.fillOval(x, groundY - rockHeight, blockSize / 2, rockHeight);
 		}
 	}
 
