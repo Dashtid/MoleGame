@@ -33,13 +33,12 @@ class GameGraphicsTest {
         assertEquals(20, gameGraphics.getGridHeight());
     }
 
-}
-
-public void resizeGrid(int newWidth, int newHeight) {
-    this.width = newWidth;
-    this.height = newHeight;
-    this.grid = new Color[width][height]; // Create a new grid with the updated size
-    this.setPreferredSize(new Dimension(width * blockSize, height * blockSize));
-    frame.pack(); // Adjust the frame size
-    repaint(); // Redraw the updated grid
+    public void resizeGrid(int newWidth, int newHeight) {
+        this.width = newWidth;
+        this.height = newHeight;
+        this.grid = new Color[width][height]; // Create a new grid with the updated size
+        this.setPreferredSize(new Dimension(width * blockSize, height * blockSize));
+        frame.pack(); // Adjust the frame size
+        repaint(); // Redraw the updated grid
+    }
 }
