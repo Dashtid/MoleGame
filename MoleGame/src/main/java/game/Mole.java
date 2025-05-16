@@ -25,11 +25,12 @@ public class Mole {
 	private GameGraphics g;
 	private int score = 0;
 	private static final Logger logger = Logger.getLogger(Mole.class.getName());
-	private InputHandler inputHandler = new InputHandler();
+	private InputHandler inputHandler;
 
 	public Mole() {
 		try {
-			this.g = new GameGraphics(INITIAL_GRID_WIDTH, INITIAL_GRID_HEIGHT, BLOCK_SIZE);
+			this.inputHandler = new InputHandler();
+			this.g = new GameGraphics(INITIAL_GRID_WIDTH, INITIAL_GRID_HEIGHT, BLOCK_SIZE, inputHandler);
 		} catch (Exception e) {
 			if (g != null) {
 				g.showError("Failed to initialize GameGraphics: " + e.getMessage());
@@ -95,6 +96,11 @@ public class Mole {
 			goalY = SKY_HEIGHT + (int) (Math.random() * (g.getGridHeight() - SKY_HEIGHT));
 		} while (g.getBlockColor(goalX, goalY) != null); // Ensure no overlap
 		g.block(goalX, goalY, ColorConstants.GOAL);
+
+		// Ensure the mole's starting cell is empty (tunnel)
+		int startX = g.getGridWidth() / 2;
+		int startY = g.getGridHeight() / 2;
+		g.block(startX, startY, ColorConstants.TUNNEL);
 	}
 
 	private long getRemainingTime(long startTime, long timeLimit) {
@@ -113,10 +119,14 @@ public class Mole {
 		final boolean[] speedBoost = { false }; // Use an array to allow modification inside the lambda
 		ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
+		// Draw the mole at the starting position (after world is drawn)
+		g.block(x, y, ColorConstants.MOLE);
+
 		try {
 			while (true) {
-				g.block(x, y, ColorConstants.MOLE);
 				char key = inputHandler.waitForKeyPress();
+
+				// Remove the mole from the current position (turn to tunnel)
 				g.block(x, y, ColorConstants.TUNNEL);
 
 				if (key == 'p') {
@@ -124,6 +134,8 @@ public class Mole {
 					while (g.waitForKey() != 'r') {
 					}
 					g.hidePauseScreen();
+					// Redraw the mole after pause
+					g.block(x, y, ColorConstants.MOLE);
 					continue;
 				}
 
@@ -147,6 +159,8 @@ public class Mole {
 
 				if (isSky(newY)) {
 					g.showMessage("You can't dig in the sky!");
+					// Redraw the mole at the current position
+					g.block(x, y, ColorConstants.MOLE);
 					continue;
 				}
 
@@ -196,6 +210,9 @@ public class Mole {
 					g.showGameOverScreen(score);
 					return false;
 				}
+
+				// Draw the mole at the new position
+				g.block(x, y, ColorConstants.MOLE);
 
 				// Update the timer display with remaining time
 				long remainingTime = getRemainingTime(startTime, timeLimit);

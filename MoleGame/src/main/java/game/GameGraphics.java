@@ -19,33 +19,22 @@ public class GameGraphics extends JPanel {
 	private JLabel timerLabel;
 	private InputHandler inputHandler;
 
-	public GameGraphics(int w, int h, int bs) {
-		this.width = w;
-		this.height = h;
-		this.blockSize = bs;
-		this.grid = new Color[width][height]; // Initialize the grid
-		this.score = 0;
+	public GameGraphics(int width, int height, int blockSize, InputHandler inputHandler) {
+		this.width = width;
+		this.height = height;
+		this.blockSize = blockSize;
+		this.inputHandler = inputHandler;
+		this.frame = new JFrame("Mole Game");
+		this.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		this.frame.setSize(width * blockSize + 100, height * blockSize + 100);
+		this.frame.add(this);
+		this.setFocusable(true);
+		this.requestFocusInWindow();
+		this.addKeyListener(inputHandler); // Use the shared handler
+		this.frame.setVisible(true);
 
-		// Initialize the JFrame
-		frame = new JFrame("Mole Game");
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frame.setLayout(new BorderLayout());
-
-		// Add the game grid
-		this.setPreferredSize(new Dimension(width * blockSize, height * blockSize));
-		frame.add(this, BorderLayout.CENTER);
-
-		// Add a timer label
-		timerLabel = new JLabel("Time: 0s");
-		timerLabel.setHorizontalAlignment(SwingConstants.CENTER);
-		frame.add(timerLabel, BorderLayout.NORTH);
-
-		frame.pack();
-		frame.setVisible(true);
-
-		// Add key listener for user input
-		inputHandler = new InputHandler();
-		frame.addKeyListener(inputHandler);
+		// ADD THIS LINE:
+		this.grid = new Color[width][height];
 	}
 
 	/**
@@ -196,10 +185,9 @@ public class GameGraphics extends JPanel {
 		}
 	}
 
+	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
-
-		// Draw the game grid
 		for (int x = 0; x < width; x++) {
 			for (int y = 0; y < height; y++) {
 				if (grid[x][y] != null) {
@@ -208,19 +196,19 @@ public class GameGraphics extends JPanel {
 				}
 			}
 		}
-
-		// Draw the timer below the grid
-		g.setColor(ColorConstants.TIMER_TEXT);
-		g.drawString("Time: " + timer + "s", 10, height * blockSize + 40);
-
+		// Draw score and timer
 		g.setColor(Color.WHITE);
-		g.drawString("Score: " + score, 10, height * blockSize + 60);
+		g.drawString("Score: " + score, 10, height * blockSize + 20);
+		g.setColor(ColorConstants.TIMER_TEXT);
+		g.drawString("Time: " + timer + "s", 120, height * blockSize + 20);
 
+		// Draw pause overlay if paused
 		if (isPaused) {
 			g.setColor(new Color(0, 0, 0, 128));
 			g.fillRect(0, 0, getWidth(), getHeight());
 			g.setColor(Color.WHITE);
-			g.drawString("Paused", getWidth() / 2 - 30, getHeight() / 2);
+			g.setFont(g.getFont().deriveFont(Font.BOLD, 36f));
+			g.drawString("PAUSED", getWidth() / 2 - 80, getHeight() / 2);
 		}
 	}
 
