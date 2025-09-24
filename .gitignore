@@ -7,3 +7,7 @@
 *.iml
 target/
 bin/
+
+settings.local.json
+# Claude Code configuration
+.claude/
